@@ -13,52 +13,50 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM joystickReportDescriptor[] =
 0xA1,0x01,	// COLLECTION (Application)
 	0x85,0x01,	// REPORT_ID (1)
 
-	// FFP input descriptor:
-    HID_RI_USAGE(8, 0x01), // Pointer
-    HID_RI_COLLECTION(8, 0x00), // Physical
-        HID_RI_USAGE(8, 0x30), // Usage X
-        HID_RI_USAGE(8, 0x31), // Usage Y
-        HID_RI_LOGICAL_MINIMUM(16, -512),
-        HID_RI_LOGICAL_MAXIMUM(16, 511),
-        HID_RI_PHYSICAL_MINIMUM(8, 0),
-        HID_RI_PHYSICAL_MAXIMUM(16, 1023),
-        HID_RI_REPORT_COUNT(8, 0x02),
-        HID_RI_REPORT_SIZE(8, 0x10),
-        HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
-    HID_RI_END_COLLECTION(0),
+	HID_RI_USAGE_PAGE(8, 0x01),
+	HID_RI_USAGE(8, 0x04),
+	HID_RI_COLLECTION(8, 0x01),
+		HID_RI_USAGE(8, 0x01),
+		HID_RI_COLLECTION(8, 0x00),
+			HID_RI_USAGE(8, 0x30),
+			HID_RI_USAGE(8, 0x31),
+			HID_RI_LOGICAL_MINIMUM(16, -127),
+			HID_RI_LOGICAL_MAXIMUM(16, 127),
+			HID_RI_PHYSICAL_MINIMUM(16, 0),
+			HID_RI_PHYSICAL_MAXIMUM(16, 0xFF),
+			HID_RI_REPORT_COUNT(8, 2),
+			HID_RI_REPORT_SIZE(8, 8),
+			HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+		HID_RI_END_COLLECTION(0),
+		HID_RI_USAGE_PAGE(8, 0x09),
+		HID_RI_USAGE_MINIMUM(8, 0x01),
+		HID_RI_USAGE_MAXIMUM(8, 0x0A),
+		HID_RI_LOGICAL_MINIMUM(8, 0x00),
+		HID_RI_LOGICAL_MAXIMUM(8, 0x01),
+		HID_RI_REPORT_SIZE(8, 0x01),
+		HID_RI_REPORT_COUNT(8, 10),
+		HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+		HID_RI_REPORT_SIZE(8, 6),
+		HID_RI_REPORT_COUNT(8, 0x01),
+		HID_RI_INPUT(8, HID_IOF_CONSTANT),
+	HID_RI_END_COLLECTION(0),
 
-    HID_RI_USAGE_PAGE(8, 0x09),
-    HID_RI_USAGE_MINIMUM(8, 0x01),
-    HID_RI_USAGE_MAXIMUM(8, 0x08),
-    HID_RI_LOGICAL_MINIMUM(8, 0x00),
-    HID_RI_LOGICAL_MAXIMUM(8, 0x01),
-	0x45, 0x01,		//     PHYSICAL_MAXIMUM (1)
-    HID_RI_REPORT_SIZE(8, 0x01),
-    HID_RI_REPORT_COUNT(8, 0x08),
-    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
+	// HID_RI_USAGE_PAGE(8, 0x01), // Generic Desktop
+	// 0x09, 0x39,		//     USAGE (Hat switch)
+	// 0x95, 0x01,		//     REPORT_COUNT (1)
+	// 0x75, 0x04,		//     REPORT_SIZE (4)
+	// 0x15, 0x00,		//     LOGICAL_MINIMUM (0)
+	// 0x25, 0x07,		//     LOGICAL_MAXIMUM (7)
+	// 0x46, 0x3B, 0x01,	//     PHYSICAL_MAXIMUM (315)
+	// 0x65, 0x14,		//     UNIT (Eng Rot:Angular Pos)
+	// 0x81, 0x42,		//     INPUT (Data,Var,Abs,Null)	 4b Hat
+	//
+	// 0x75, 0x04,		//     REPORT_SIZE (4)
+	// 0x95, 0x01,		//     REPORT_COUNT (1)
+	// 0x81, 0x01,		//     INPUT (Cnst,Ary,Abs)		 4b Fill
 
-    HID_RI_USAGE_MINIMUM(8, 0x09),
-    HID_RI_USAGE_MAXIMUM(8, 0x10),
-    HID_RI_REPORT_SIZE(8, 0x01),
-    HID_RI_REPORT_COUNT(8, 0x08),
-    HID_RI_INPUT(8, HID_IOF_DATA | HID_IOF_VARIABLE | HID_IOF_ABSOLUTE),
-
-	HID_RI_USAGE_PAGE(8, 0x01), // Generic Desktop
-	0x09, 0x39,		//     USAGE (Hat switch)
-	0x95, 0x01,		//     REPORT_COUNT (1)
-	0x75, 0x04,		//     REPORT_SIZE (4)
-	0x15, 0x00,		//     LOGICAL_MINIMUM (0)
-	0x25, 0x07,		//     LOGICAL_MAXIMUM (7)
-	0x46, 0x3B, 0x01,	//     PHYSICAL_MAXIMUM (315)
-	0x65, 0x14,		//     UNIT (Eng Rot:Angular Pos)
-	0x81, 0x42,		//     INPUT (Data,Var,Abs,Null)	 4b Hat
-
-	0x75, 0x04,		//     REPORT_SIZE (4)
-	0x95, 0x01,		//     REPORT_COUNT (1)
-	0x81, 0x01,		//     INPUT (Cnst,Ary,Abs)		 4b Fill
-
-	0x55, 0x00, 	// ( UNIT_EXPONENT ( 0))
-	0x65, 0x00, 	// ( UNIT ( None))
+	// 0x55, 0x00, 	// ( UNIT_EXPONENT ( 0))
+	// 0x65, 0x00, 	// ( UNIT ( None))
 /*
 // FF2 input descriptor:
 	0x09,0x01,	// USAGE (01)

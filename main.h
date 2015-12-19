@@ -12,7 +12,6 @@
 
 #include <LUFA/Version.h>
 #include <LUFA/Drivers/USB/USB.h>
-#include <LUFA/Drivers/Board/LEDs.h>
 
 /* Type Defines: */
 /** Type define for the joystick HID report structure, for creating and sending HID reports to the host PC.
@@ -22,7 +21,6 @@
 /* Function Prototypes: */
 void SetupHardware(void);
 void HID_Task(void);
-void CDC1_Task(void);
 
 void EVENT_USB_Device_Connect(void);
 void EVENT_USB_Device_Disconnect(void);

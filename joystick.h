@@ -8,14 +8,14 @@ extern const uint8_t INPUT_REPORTID_ALL;
 // Data structures for input reports from the joystick positions
 
 typedef struct
-	{
+{
 	// Joystick Input Report
 	uint8_t	reportId;	// =1
-	int16_t  X;
-	int16_t  Y;
+	uint8_t  X;
+	uint8_t  Y;
 	uint16_t Button;
-	uint8_t Hat;
-	} USB_JoystickReport_Data_t;
+	// uint8_t Hat;
+} USB_JoystickReport_Data_t;
 
 // Functions that form the inferface from the generic parts of the code
 // to joystick model specific parts.
