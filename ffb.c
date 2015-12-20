@@ -45,8 +45,8 @@ void FFB_Enable(void)
     TCCR1A = _BV(COM1A0) | _BV(COM1A1) | _BV(COM1B0) | _BV(COM1B1) | _BV(WGM10);
     TCCR1B = _BV(CS00);
 
-    OCR1A = 127; //This keeps outputs in a logical LOW state. (0% duty cycle)
-    OCR1B = 127;
+    OCR1A = 255; //This keeps outputs in a logical LOW state. (0% duty cycle)
+    OCR1B = 255;
 
     PWM_on = 1;
 }
