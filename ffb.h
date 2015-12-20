@@ -3,6 +3,10 @@
 
 #include <avr/io.h>
 
+void FFB_Init(void);
+void FFB_Disable(void);
+void FFB_Enable(void);
+void FFB_Update(uint8_t xAxis, uint8_t yAxis);
 
 /* Type Defines: */
 /** Type define for the joystick HID report structure, for creating and sending HID reports to the host PC.
@@ -11,8 +15,6 @@
 
 // Maximum number of parallel effects in memory
 #define MAX_EFFECTS 20
-
-// ---- Input
 
 typedef struct
 {
