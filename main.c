@@ -16,6 +16,8 @@ int main(void)
     {
         HID_Task();
 
+		FFB_Update(127, 127);
+
         USB_USBTask();
     }
 }
@@ -32,6 +34,7 @@ void SetupHardware(void)
 
     USB_Init();
     Joystick_Init();
+	FFB_Init();
 }
 
 /** Event handler for the USB_ConfigurationChanged event. This is fired when the host set the current configuration
@@ -156,6 +159,8 @@ void EVENT_USB_Device_ControlRequest(void)
 
                     cli();
                     *bootKeyPtr = bootKey;  // There is no way this memory will ever be accessed again until reboot.
+					wdt_reset();
+					wdt_disable();
                     wdt_enable(WDTO_250MS); // Rationale: Interrupts are off, and an infinite loop follows.
                     while (1);
                 }

@@ -4,5 +4,5 @@
 
 make;
 python reset.py;
-sleep 1;
+sleep 2;
 avrdude -v -p atmega32u4 -c avr109 -P /dev/ttyACM0 -b 57600 -D -U flash:w:Joystick.hex:i;
