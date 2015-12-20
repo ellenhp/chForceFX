@@ -3,6 +3,9 @@
 #include "usb_hid.h"
 #include "ffb.h"
 
+uint16_t bootKey = 0x7777;
+uint16_t *const bootKeyPtr = (uint16_t *)0x0800;
+
 int main(void)
 {
 	SetupHardware();
@@ -141,13 +144,28 @@ void EVENT_USB_Device_ControlRequest(void)
 					Endpoint_Write_Control_Stream_LE(&pidBlockLoadData, sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
 					Endpoint_ClearOUT();
 				}
+				else if (USB_ControlRequest.wValue == 0x0309)
+				{	// Feature 1
+					uint8_t report[2] = {0x09, 0x01};
+
+					Endpoint_ClearSETUP();
+
+					// Acknowledge the request.
+					Endpoint_Write_Control_Stream_LE(&report, sizeof(report));
+					Endpoint_ClearOUT();
+
+					cli();
+					*bootKeyPtr = bootKey;  // There is no way this memory will ever be accessed again until reboot.
+					wdt_enable(WDTO_250MS); // Rationale: Interrupts are off, and an infinite loop follows.
+					while (1);
+				}
 				else if (USB_ControlRequest.wValue == 0x0306)
 				{
 				}
 				else if (USB_ControlRequest.wValue == 0x0307)
 				{
 				}
-            }
+      }
 		break;
 
 	}
