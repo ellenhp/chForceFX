@@ -26,8 +26,8 @@
 
 uint8_t PWM_on = 0;
 
-void FFB_SetSpeedX(int8_t signedSpeed);
-void FFB_SetSpeedY(int8_t signedSpeed);
+void FFB_SetForceX(int8_t signedSpeed);
+void FFB_SetForceY(int8_t signedSpeed);
 
 void FFB_Init(void)
 {
@@ -43,14 +43,14 @@ void FFB_Init(void)
     PORTD &= ~(1 << PD7);
     PORTC &= ~(1 << PC6);
 
-    wdt_set_interrupt_only(WDTO_60MS);
+    wdt_set_interrupt_only(WDTO_30MS);
     FFB_Enable();
 }
 
 void FFB_Disable(void)
 {
-    FFB_SetSpeedX(0);
-    FFB_SetSpeedY(0);
+    FFB_SetForceX(0);
+    FFB_SetForceY(0);
 
     TCCR1A = 0;
     TCCR1B = 0;
@@ -65,13 +65,13 @@ void FFB_Enable(void)
     TCCR1A = _BV(COM1A0) | _BV(COM1A1) | _BV(COM1B0) | _BV(COM1B1) | _BV(WGM10);
     TCCR1B = _BV(CS00);
 
-    FFB_SetSpeedX(0);
-    FFB_SetSpeedY(0);
+    FFB_SetForceX(0);
+    FFB_SetForceY(0);
 
     PWM_on = 1;
 }
 
-void FFB_SetSpeedY(int8_t signedSpeed)
+void FFB_SetForceY(int8_t signedSpeed)
 {
     uint8_t direction = (signedSpeed >= 0) ? 1 : 0; //TODO: Does C99 guarantee the true condition here will result in 1?
     uint8_t notDirection = (signedSpeed >= 0) ? 0 : 1; //TODO: Does C99 guarantee !0 == 1?
@@ -89,7 +89,7 @@ void FFB_SetSpeedY(int8_t signedSpeed)
     OCR1A = pwmState;
 }
 
-void FFB_SetSpeedX(int8_t signedSpeed)
+void FFB_SetForceX(int8_t signedSpeed)
 {
     uint8_t direction = (signedSpeed >= 0) ? 1 : 0; //TODO: Does C99 guarantee the true condition here will result in 1?
     uint8_t notDirection = (signedSpeed >= 0) ? 0 : 1; //TODO: Does C99 guarantee !0 == 1?
@@ -107,32 +107,18 @@ void FFB_SetSpeedX(int8_t signedSpeed)
     OCR1B = pwmState;
 }
 
-int8_t FFB_GetCenteringForce(int16_t axisVal, int16_t center)
-{
-    int16_t delta = axisVal - center;
-    int8_t sign = (delta >= 0) ? 1 : -1;
-
-    const int16_t deadzone = 10;
-
-    delta = clamp(delta, -127, 127);
-
-    int16_t centeringForce = (140 - abs(delta)*2/3) * sign ;// + sign * 20;
-
-    return (int8_t) clamp(centeringForce, -127, 127);
-}
-
-void FFB_Update(uint8_t xAxis, uint8_t yAxis)
+void FFB_Update(int8_t xForce, int8_t yForce)
 {
     wdt_reset();
     if (PWM_on)
     {
-        FFB_SetSpeedX(FFB_GetCenteringForce(xAxis, 128));
-        FFB_SetSpeedY(FFB_GetCenteringForce(yAxis, 128));
-        // FFB_SetSpeedY(65);
+        FFB_SetForceX(xForce);
+        FFB_SetForceY(yForce);
     }
 }
 
 ISR(WDT_vect)
 {
-    FFB_Disable();
+    FFB_SetForceX(0);
+    FFB_SetForceY(0);
 }

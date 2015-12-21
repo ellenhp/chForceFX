@@ -6,7 +6,7 @@
 void FFB_Init(void);
 void FFB_Disable(void);
 void FFB_Enable(void);
-void FFB_Update(uint8_t xAxis, uint8_t yAxis);
+void FFB_Update(int8_t xAxis, int8_t yAxis);
 
 /* Type Defines: */
 /** Type define for the joystick HID report structure, for creating and sending HID reports to the host PC.

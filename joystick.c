@@ -3,25 +3,24 @@
 #include "usb_hid.h"
 #include <avr/io.h>
 
-uint16_t read_adc(uint8_t channel){
-	ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((channel >> 3) & 0x01) << MUX5);
-	ADMUX = (1<<REFS0) | (channel & 0x7);
-	ADCSRA |= (1<<ADSC);
-	while(ADCSRA & (1<<ADSC));
+static uint8_t xAxisValues[128];
+static uint8_t yAxisValues[128];
 
-	uint8_t low, high;
-	low  = ADCL;
-	high = ADCH;
+static uint8_t xPtr = 0;
+static uint8_t yPtr = 0;
 
-	return (high << 8) | low;                    //Returns the ADC value of the chosen channel
-}
+static uint8_t adcChannel = 6;
 
 /** Configures the board hardware and chip peripherals for the joystick's functionality. */
 void Joystick_Init(void)
 {
     // Initialize..
-	ADCSRA |= ((1<<ADPS2)|(1<<ADPS1)|(1<<ADPS0));    //16Mhz/128 = 125Khz the ADC reference clock
-    ADCSRA |= (1<<ADEN);                //Turn on ADC
+	ADCSRA |= ((1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0)); //16Mhz/128 = 125Khz the ADC reference clock
+	ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((adcChannel >> 3) & 0x01) << MUX5);
+	ADMUX = (1 << REFS0) | (adcChannel & 0x7);
+    ADCSRA |= (1 << ADEN); // Enable on ADC
+	ADCSRA |= (1 << ADIE); // Enable ADC Interrupt
+	ADCSRA |= (1 << ADSC); // Run ADC
 }
 
 /** Configures the board hardware and chip peripherals for the joystick's functionality. */
@@ -35,11 +34,39 @@ int Joystick_CreateInputReport(uint8_t inReportId, USB_JoystickReport_Data_t* co
 {
 	// Convert the raw input data to USB report
 	outReportData->reportId = 1;
-	outReportData->X = (read_adc(6)>>2) - 128;
-	outReportData->Y = (read_adc(7)>>2) - 128;
 
-	outReportData->Button = 5;
-	// outReportData->Hat = 1;
+	int16_t xTotal = 0;
+	int16_t yTotal = 0;
+	for (int i = 0; i < sizeof(xAxisValues); i++)
+	{
+		xTotal += xAxisValues[i];
+		yTotal += yAxisValues[i];
+	}
+	outReportData->X = (xTotal / sizeof(xAxisValues)) - 128;
+	outReportData->Y = (yTotal / sizeof(yAxisValues)) - 128;
 
 	return 1;
+}
+
+ISR(ADC_vect)
+{
+	uint8_t low, high;
+	low  = ADCL;
+	high = ADCH;
+	if (adcChannel == 6)
+	{
+		adcChannel = 7;
+		xAxisValues[xPtr] = (high << 6) | (low >> 2);
+		xPtr = (xPtr + 1) % sizeof(xAxisValues);
+	}
+	else
+	{
+		adcChannel = 6;
+		yAxisValues[yPtr] = (high << 6) | (low >> 2);
+		yPtr = (yPtr + 1) % sizeof(yAxisValues);
+	}
+
+	ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((adcChannel >> 3) & 0x01) << MUX5);
+	ADMUX = (1 << REFS0) | (adcChannel & 0x7);
+	ADCSRA |= (1 << ADSC);
 }
