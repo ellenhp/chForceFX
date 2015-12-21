@@ -35,8 +35,8 @@ int Joystick_CreateInputReport(uint8_t inReportId, USB_JoystickReport_Data_t* co
 {
 	// Convert the raw input data to USB report
 	outReportData->reportId = 1;
-	outReportData->X = (read_adc(7)>>2) - 128;
-	outReportData->Y = (read_adc(6)>>2) - 128;
+	outReportData->X = (read_adc(6)>>2) - 128;
+	outReportData->Y = (read_adc(7)>>2) - 128;
 
 	outReportData->Button = 5;
 	// outReportData->Hat = 1;

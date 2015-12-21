@@ -16,8 +16,6 @@ int main(void)
     {
         HID_Task();
 
-		FFB_Update(127, 127);
-
         USB_USBTask();
     }
 }
@@ -180,6 +178,11 @@ void EVENT_USB_Device_ControlRequest(void)
 /** Function to manage HID report generation and transmission to the host. */
 void HID_Task(void)
 {
+	USB_JoystickReport_Data_t joystickReportData;
+	Joystick_CreateInputReport(1, &joystickReportData);
+
+	FFB_Update(joystickReportData.X, joystickReportData.Y);
+
     /* Device must be connected and configured for the task to run */
     if (USB_DeviceState != DEVICE_STATE_Configured)
         return;
@@ -189,11 +192,6 @@ void HID_Task(void)
 
     if (Endpoint_IsINReady())
     {
-        USB_JoystickReport_Data_t joystickReportData;
-
-        /* Create the next HID report to send to the host */
-        Joystick_CreateInputReport(1, &joystickReportData);
-
         /* Write Joystick Report Data */
         Endpoint_Write_Stream_LE(&joystickReportData, sizeof(USB_JoystickReport_Data_t), NULL);
 
