@@ -24,7 +24,13 @@
 #define max(A, B) ((A > B) ? A : B)
 #define clamp(val, lower, upper) min(upper, max(lower, val))
 
-uint8_t PWM_on = 0;
+static uint8_t PWM_on = 0;
+
+static int16_t centerP = 0;
+static int16_t centerD = 0;
+
+static int8_t xCenter = 0;
+static int8_t yCenter = 0;
 
 void FFB_SetForceX(int8_t signedSpeed);
 void FFB_SetForceY(int8_t signedSpeed);
@@ -107,14 +113,52 @@ void FFB_SetForceX(int8_t signedSpeed)
     OCR1B = pwmState;
 }
 
-void FFB_Update(int8_t xForce, int8_t yForce)
+void FFB_SetPD(int16_t p, int16_t d)
 {
+    centerP = p;
+    centerD = d;
+}
+
+void FFB_SetCenter(int8_t xCenterIn, int8_t yCenterIn)
+{
+    xCenter = xCenterIn;
+    yCenter = yCenterIn;
+}
+
+void FFB_Update(int8_t xAxis, int8_t yAxis)
+{
+    static int8_t lastX = 0;
+    static int8_t lastY = 0;
+    static int8_t firstRun = 1;
+
+    if (firstRun)
+    {
+        lastX = xAxis;
+        lastY = yAxis;
+        firstRun = 0;
+    }
+
     wdt_reset();
     if (PWM_on)
     {
-        FFB_SetForceX(xForce);
-        FFB_SetForceY(yForce);
+        int16_t xError = xCenter - xAxis;
+        int16_t yError = yCenter - yAxis;
+
+        int16_t xVel = xAxis - lastX;
+        int16_t yVel = yAxis - lastY;
+
+        int16_t xForceP = (xError * centerP) / 16;
+        int16_t yForceP = (yError * centerP) / 16;
+
+        int16_t xForceD = (xVel * centerD) / 8;
+        int16_t yForceD = (yVel * centerD) / 8;
+
+        FFB_SetForceX((int8_t)clamp(xForceP - xForceD, -127, 127));
+        FFB_SetForceY((int8_t)clamp(yForceP - yForceD, -127, 127));
     }
+
+    lastX = xAxis;
+    lastY = yAxis;
 }
 
 ISR(WDT_vect)

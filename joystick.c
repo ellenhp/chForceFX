@@ -3,11 +3,14 @@
 #include "usb_hid.h"
 #include <avr/io.h>
 
-static uint8_t xAxisValues[128];
-static uint8_t yAxisValues[128];
+#define min(A, B) ((A < B) ? A : B)
+#define max(A, B) ((A > B) ? A : B)
+#define clamp(val, lower, upper) min(upper, max(lower, val))
 
-static uint8_t xPtr = 0;
-static uint8_t yPtr = 0;
+static int8_t axisValues[2] = {0, 0};
+static uint16_t axisAccumulators[2] = {0, 0};
+
+static uint8_t accumulatedValueCount = 0;
 
 static uint8_t adcChannel = 6;
 
@@ -37,13 +40,8 @@ int Joystick_CreateInputReport(uint8_t inReportId, USB_JoystickReport_Data_t* co
 
 	int16_t xTotal = 0;
 	int16_t yTotal = 0;
-	for (int i = 0; i < sizeof(xAxisValues); i++)
-	{
-		xTotal += xAxisValues[i];
-		yTotal += yAxisValues[i];
-	}
-	outReportData->X = (xTotal / sizeof(xAxisValues)) - 128;
-	outReportData->Y = (yTotal / sizeof(yAxisValues)) - 128;
+	outReportData->X = axisValues[0];
+	outReportData->Y = axisValues[1];
 
 	return 1;
 }
@@ -56,14 +54,32 @@ ISR(ADC_vect)
 	if (adcChannel == 6)
 	{
 		adcChannel = 7;
-		xAxisValues[xPtr] = (high << 6) | (low >> 2);
-		xPtr = (xPtr + 1) % sizeof(xAxisValues);
+		axisAccumulators[0] += (high << 6) | (low >> 2);
 	}
 	else
 	{
 		adcChannel = 6;
-		yAxisValues[yPtr] = (high << 6) | (low >> 2);
-		yPtr = (yPtr + 1) % sizeof(yAxisValues);
+		axisAccumulators[1] += (high << 6) | (low >> 2);
+		if (accumulatedValueCount < 128)
+		{
+			accumulatedValueCount++;
+		}
+		else
+		{
+			int16_t positiveValue = axisAccumulators[0] >> 7;
+			axisValues[0] = (int8_t)clamp(positiveValue - 128, -127, 127);
+
+			positiveValue = axisAccumulators[1] >> 7;
+			axisValues[1] = (int8_t)clamp(positiveValue - 128, -127, 127);
+
+			axisAccumulators[0] = 0;
+			axisAccumulators[1] = 0;
+			accumulatedValueCount = 0;
+
+			//TODO: This is probably a hack. Get another timer working so we can put it on another ISR.
+			FFB_Update(axisValues[0], axisValues[1]);
+		}
+
 	}
 
 	ADCSRB = (ADCSRB & ~(1 << MUX5)) | (((adcChannel >> 3) & 0x01) << MUX5);

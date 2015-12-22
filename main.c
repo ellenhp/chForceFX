@@ -121,7 +121,7 @@ void EVENT_USB_Device_ControlRequest(void)
                 Endpoint_ClearSETUP();
 
                 uint8_t data[10];	// This is enough room for all reports
-                uint16_t len = 0;	// again, enough for all
+                uint16_t len = 10;	// again, enough for all
 
                 len = USB_ControlRequest.wLength;
 
@@ -162,6 +162,19 @@ void EVENT_USB_Device_ControlRequest(void)
                     wdt_enable(WDTO_250MS); // Rationale: Interrupts are off, and an infinite loop follows.
                     while (1);
                 }
+                else if (USB_ControlRequest.wValue == 0x030F)
+                {
+                    int8_t xCenterIn, yCenterIn;
+                    memcpy(&xCenterIn, &data[0], 1);
+                    memcpy(&yCenterIn, &data[1], 1);
+
+                    int16_t pIn = data[2];
+                    int16_t dIn = data[3];
+
+                    FFB_SetPD(pIn, dIn);
+                    FFB_SetCenter(xCenterIn, yCenterIn);
+
+                }
                 else if (USB_ControlRequest.wValue == 0x0306)
                 {
                 }
@@ -188,7 +201,7 @@ void HID_Task(void)
     if (Endpoint_IsINReady())
     {
         USB_JoystickReport_Data_t joystickReportData;
-    	Joystick_CreateInputReport(1, &joystickReportData);
+        Joystick_CreateInputReport(1, &joystickReportData);
 
         /* Write Joystick Report Data */
         Endpoint_Write_Stream_LE(&joystickReportData, sizeof(USB_JoystickReport_Data_t), NULL);
