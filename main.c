@@ -169,9 +169,10 @@ void EVENT_USB_Device_ControlRequest(void)
                     memcpy(&yCenterIn, &data[1], 1);
 
                     int16_t pIn = data[2];
-                    int16_t dIn = data[3];
+                    int16_t iIn = data[3];
+                    int16_t dIn = data[4];
 
-                    FFB_SetPD(pIn, dIn);
+                    FFB_SetPID(pIn, iIn, dIn);
                     FFB_SetCenter(xCenterIn, yCenterIn);
 
                 }

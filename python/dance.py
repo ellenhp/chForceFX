@@ -45,12 +45,34 @@ def main():
                 except usb.core.USBError as e:
                     sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
 
-    for i in range(10):
-        data = device.read(0x81, 64, timeout=100)
+    testParams = [4, 0, 5]
 
-    device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00, 32, 10], timeout=100)
+    stabilizingTime = 3
 
-    usb.util.release_interface(device, intf.bInterfaceNumber)
-    device.attach_kernel_driver(intf.bInterfaceNumber)
+    startPositions = [
+        [-127, -127],
+        [-100, -100],
+        [100, 0],
+        [0, 100],
+    ]
 
+    try:
+        for startPos in startPositions:
+            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [toSChar(startPos[0]), toSChar(startPos[0]), 4, 0, 5], timeout=100)
+
+            sleep(1)
+
+            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00] + testParams, timeout=100)
+
+            sleep(stabilizingTime)
+    except:
+        print 'cleaning up'
+        device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00, 0, 0, 0], timeout=100)
+
+        usb.util.release_interface(device, intf.bInterfaceNumber)
+        device.attach_kernel_driver(intf.bInterfaceNumber)
+
+    device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00] + testParams, timeout=100)
+    # print 'cleaning up'
+    # device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00, 0, 0, 0], timeout=100)
 main()

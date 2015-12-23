@@ -6,7 +6,7 @@
 void FFB_Init(void);
 void FFB_Disable(void);
 void FFB_Enable(void);
-void FFB_SetPD(int16_t p, int16_t d);
+void FFB_SetPID(int16_t p, int16_t i, int16_t d);
 void FFB_SetCenter(int8_t xCenter, int8_t yCenter);
 void FFB_Update(int8_t xAxis, int8_t yAxis);
 

@@ -27,10 +27,14 @@
 static uint8_t PWM_on = 0;
 
 static int16_t centerP = 0;
+static int16_t centerI = 0;
 static int16_t centerD = 0;
 
 static int8_t xCenter = 0;
 static int8_t yCenter = 0;
+
+static int16_t xIntegral = 0;
+static int16_t yIntegral = 0;
 
 void FFB_SetForceX(int8_t signedSpeed);
 void FFB_SetForceY(int8_t signedSpeed);
@@ -113,9 +117,15 @@ void FFB_SetForceX(int8_t signedSpeed)
     OCR1B = pwmState;
 }
 
-void FFB_SetPD(int16_t p, int16_t d)
+void FFB_SetPID(int16_t p, int16_t i, int16_t d)
 {
+    if (centerI != i)
+    {
+        xIntegral = 0;
+        yIntegral = 0;
+    }
     centerP = p;
+    centerI = i;
     centerD = d;
 }
 
@@ -127,9 +137,15 @@ void FFB_SetCenter(int8_t xCenterIn, int8_t yCenterIn)
 
 void FFB_Update(int8_t xAxis, int8_t yAxis)
 {
+    const int16_t deadzone = 10;
+    const int16_t stiction = 60;
+
     static int8_t lastX = 0;
     static int8_t lastY = 0;
     static int8_t firstRun = 1;
+
+    static int16_t xLastVel = 0;
+    static int16_t yLastVel = 0;
 
     if (firstRun)
     {
@@ -144,17 +160,47 @@ void FFB_Update(int8_t xAxis, int8_t yAxis)
         int16_t xError = xCenter - xAxis;
         int16_t yError = yCenter - yAxis;
 
-        int16_t xVel = xAxis - lastX;
-        int16_t yVel = yAxis - lastY;
+        int16_t xVel = (xAxis - lastX) / 2 + xLastVel / 2;
+        int16_t yVel = (yAxis - lastY) / 2 + yLastVel / 2;
 
-        int16_t xForceP = (xError * centerP) / 16;
-        int16_t yForceP = (yError * centerP) / 16;
+        xIntegral += xError;
+        yIntegral += yError;
 
-        int16_t xForceD = (xVel * centerD) / 8;
-        int16_t yForceD = (yVel * centerD) / 8;
+        int16_t xForceP = clamp((xError * centerP) / 16, -127, 127);
+        int16_t yForceP = clamp((yError * centerP) / 16, -127, 127);
 
-        FFB_SetForceX((int8_t)clamp(xForceP - xForceD, -127, 127));
-        FFB_SetForceY((int8_t)clamp(yForceP - yForceD, -127, 127));
+        int16_t xForceI = clamp((xIntegral * centerI) / 256, -127, 127);
+        int16_t yForceI = clamp((yIntegral * centerI) / 256, -127, 127);
+
+        int16_t xForceD = clamp((xVel * centerD) / 8, -127, 127);
+        int16_t yForceD = clamp((yVel * centerD) / 8, -127, 127);
+
+        int16_t xTotalForce = xForceP + xForceI - xForceD;
+        int16_t yTotalForce = yForceP + yForceI - yForceD;
+
+        if (xTotalForce > deadzone)
+        {
+            xTotalForce += stiction;
+        }
+        if (xTotalForce < -deadzone)
+        {
+            xTotalForce -= stiction;
+        }
+
+        if (yTotalForce > deadzone)
+        {
+            yTotalForce += stiction;
+        }
+        if (yTotalForce < -deadzone)
+        {
+            yTotalForce -= stiction;
+        }
+
+        FFB_SetForceX((int8_t)clamp(xTotalForce, -127, 127));
+        FFB_SetForceY((int8_t)clamp(yTotalForce, -127, 127));
+
+        xLastVel = xVel;
+        yLastVel = yVel;
     }
 
     lastX = xAxis;
