@@ -29,9 +29,11 @@ static uint8_t PWM_on = 0;
 static int16_t centerP = 0;
 static int16_t centerI = 0;
 static int16_t centerD = 0;
+static uint16_t centerLookahead = 0;
 
 static int8_t xCenter = 0;
 static int8_t yCenter = 0;
+
 
 static int16_t xIntegral = 0;
 static int16_t yIntegral = 0;
@@ -117,7 +119,7 @@ void FFB_SetForceX(int8_t signedSpeed)
     OCR1B = pwmState;
 }
 
-void FFB_SetPID(int16_t p, int16_t i, int16_t d)
+void FFB_SetPID(int16_t p, int16_t i, int16_t d, uint16_t lookahead)
 {
     if (centerI != i)
     {
@@ -127,6 +129,7 @@ void FFB_SetPID(int16_t p, int16_t i, int16_t d)
     centerP = p;
     centerI = i;
     centerD = d;
+    centerLookahead = lookahead;
 }
 
 void FFB_SetCenter(int8_t xCenterIn, int8_t yCenterIn)
@@ -157,17 +160,20 @@ void FFB_Update(int8_t xAxis, int8_t yAxis)
     wdt_reset();
     if (PWM_on)
     {
+        int16_t xVel = (xAxis - lastX) / 2 + xLastVel / 2;
+        int16_t yVel = (yAxis - lastY) / 2 + yLastVel / 2;
+
         int16_t xError = xCenter - xAxis;
         int16_t yError = yCenter - yAxis;
 
-        int16_t xVel = (xAxis - lastX) / 2 + xLastVel / 2;
-        int16_t yVel = (yAxis - lastY) / 2 + yLastVel / 2;
+        int16_t xProjectedError = xCenter - xAxis - xVel * centerLookahead;
+        int16_t yProjectedError = yCenter - yAxis - yVel * centerLookahead;
 
         xIntegral += xError;
         yIntegral += yError;
 
-        int16_t xForceP = clamp((xError * centerP) / 16, -127, 127);
-        int16_t yForceP = clamp((yError * centerP) / 16, -127, 127);
+        int16_t xForceP = clamp(((xError + xProjectedError) * centerP) / 32, -127, 127);
+        int16_t yForceP = clamp(((yError + yProjectedError) * centerP) / 32, -127, 127);
 
         int16_t xForceI = clamp((xIntegral * centerI) / 256, -127, 127);
         int16_t yForceI = clamp((yIntegral * centerI) / 256, -127, 127);

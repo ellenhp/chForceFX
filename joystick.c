@@ -60,16 +60,16 @@ ISR(ADC_vect)
 	{
 		adcChannel = 6;
 		axisAccumulators[1] += (high << 6) | (low >> 2);
-		if (accumulatedValueCount < 128)
+		if (accumulatedValueCount < 8)
 		{
 			accumulatedValueCount++;
 		}
 		else
 		{
-			int16_t positiveValue = axisAccumulators[0] >> 7;
+			int16_t positiveValue = axisAccumulators[0] >> 3;
 			axisValues[0] = (int8_t)clamp(positiveValue - 128, -127, 127);
 
-			positiveValue = axisAccumulators[1] >> 7;
+			positiveValue = axisAccumulators[1] >> 3;
 			axisValues[1] = (int8_t)clamp(positiveValue - 128, -127, 127);
 
 			axisAccumulators[0] = 0;

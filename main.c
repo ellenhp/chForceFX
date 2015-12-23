@@ -171,8 +171,9 @@ void EVENT_USB_Device_ControlRequest(void)
                     int16_t pIn = data[2];
                     int16_t iIn = data[3];
                     int16_t dIn = data[4];
+                    uint16_t centerLookahead = data[5];
 
-                    FFB_SetPID(pIn, iIn, dIn);
+                    FFB_SetPID(pIn, iIn, dIn, centerLookahead);
                     FFB_SetCenter(xCenterIn, yCenterIn);
 
                 }

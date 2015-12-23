@@ -45,12 +45,12 @@ def main():
                 except usb.core.USBError as e:
                     sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
 
-    testParams = [4, 0, 5]
+    testParams = [8, 0, 5, 0]
 
-    stabilizingTime = 3
+    stabilizingTime = 2
 
     startPositions = [
-        [-127, -127],
+        [-127, 0],
         [-100, -100],
         [100, 0],
         [0, 100],
@@ -58,7 +58,7 @@ def main():
 
     try:
         for startPos in startPositions:
-            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [toSChar(startPos[0]), toSChar(startPos[0]), 4, 0, 5], timeout=100)
+            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [toSChar(startPos[0]), toSChar(startPos[1]), 8, 0, 1, 0], timeout=100)
 
             sleep(1)
 
