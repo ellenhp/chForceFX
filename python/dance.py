@@ -5,27 +5,18 @@ import sys
 from time import sleep
 from datetime import datetime
 
-from pypid.backend import Backend
+import pickle
+
+from scipy import interpolate
+
+import subprocess
 
 def toSChar(num):
-    num = min(127, max(-127, num))
+    num = min(127, max(-127, int(num)))
     if num < 0:
         return 0x80 | (num & 0x7F)
     else:
         return num
-
-def testAxis(targetPosition, currentPosition, state):
-    if state is None:
-        state = (currentPosition, 0)
-
-    velocity = [currentPosition[0] - state[0][0], currentPosition[1] - state[0][1]]
-    error = [targetPosition[0] - currentPosition[0], targetPosition[1] - currentPosition[1]]
-
-    if state[1] < 15:
-        return (0, 127), (currentPosition, state[1] + 1)
-    else:
-        print currentPosition[1]
-        return (0, 0), (currentPosition, state[1] + 1)
 
 def main():
 
@@ -45,34 +36,39 @@ def main():
                 except usb.core.USBError as e:
                     sys.exit("Could not detatch kernel driver from interface({0}): {1}".format(intf.bInterfaceNumber, str(e)))
 
-    testParams = [8, 0, 5, 0]
+    data = pickle.load(file('../data/test.jsdance', 'r'))
 
-    stabilizingTime = 2
+    data = sorted(data, key=lambda point: data[0])
 
-    startPositions = [
-        [-127, 0],
-        [-100, -100],
-        [100, 0],
-        [0, 100],
-    ]
+    times = [point[0] for point in data]
+    waypoints = [point[1:3] for point in data]
+
+    print times
+    print waypoints
+
+    waypointGenerator = interpolate.interp1d(times, waypoints, bounds_error=False, fill_value=[0,0], axis=0)
+
+    subprocess.Popen(["ffplay", "../data/test.mp3"])
+
+    pidParams = [8, 0, 3, 0]
+    device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00] + pidParams, timeout=100)
+
+    # sleep (0.3)
+
+    startTime = datetime.now()
 
     try:
-        for startPos in startPositions:
-            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [toSChar(startPos[0]), toSChar(startPos[1]), 8, 0, 1, 0], timeout=100)
+        while True:
+            timeSinceStart = (datetime.now() - startTime).total_seconds()
+            position = 1.5 * waypointGenerator(timeSinceStart)
+            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [toSChar(position[0]), toSChar(position[1])] + pidParams, timeout=100)
+            sleep(0.005)
 
-            sleep(1)
-
-            device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00] + testParams, timeout=100)
-
-            sleep(stabilizingTime)
-    except:
+    except KeyboardInterrupt:
         print 'cleaning up'
         device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00, 0, 0, 0], timeout=100)
 
         usb.util.release_interface(device, intf.bInterfaceNumber)
         device.attach_kernel_driver(intf.bInterfaceNumber)
 
-    device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00] + testParams, timeout=100)
-    # print 'cleaning up'
-    # device.ctrl_transfer(0x21, 0x09, 0x030F, 0x00, [0x00, 0x00, 0, 0, 0], timeout=100)
 main()

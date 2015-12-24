@@ -8,3 +8,4 @@
 *.sym
 *.map
 *.bin
+muslc/*
