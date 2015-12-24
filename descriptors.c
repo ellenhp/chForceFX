@@ -497,17 +497,6 @@ const USB_Descriptor_HIDReport_Datatype_t PROGMEM joystickReportDescriptor[] =
 		0x91,0x02,	// OUTPUT (Data,Var,Abs)
 	0xC0,	// END COLLECTION ()
 
-	0x09,0x00,	// USAGE (Undefined)
-	0xA1,0x02,	// COLLECTION (Logical)
-		0x85,0x09,	// REPORT_ID (09)
-		0x05,0x01,	// USAGE_PAGE (Generic Desktop)
-		0x15,0x00,	// LOGICAL_MINIMUM (-127)
-		0x25,0x01,	// LOGICAL_MAXIMUM (127)
-		0x75,0x08,	// REPORT_SIZE (08)
-		0x95,0x01,	// REPORT_COUNT (02)
-		0x91,0x02,	// OUTPUT (Data,Var,Abs)
-	0xC0,	// END COLLECTION ()
-
 	0x05,0x0F,	// USAGE_PAGE (Physical Interface)
 	0x09,0x77,	// USAGE (Effect Operation Report)
 	0xA1,0x02,	// COLLECTION (Logical)

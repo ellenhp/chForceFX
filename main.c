@@ -77,17 +77,6 @@ void EVENT_USB_Device_ControlRequest(void)
         case HID_REQ_GetReport:
             if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
             {
-                /*if (USB_ControlRequest.wValue == 0x0306)
-                {	// Feature 2: PID Block Load Feature Report
-                _delay_us(500);	// Windows needs this delay to register the below feature report correctly
-                USB_FFBReport_PIDBlockLoad_Feature_Data_t featureData;
-                FfbOnPIDBlockLoad(&featureData);
-                Endpoint_ClearSETUP();
-                // Write the report data to the control endpoint
-                Endpoint_Write_Control_Stream_LE(&featureData, sizeof(USB_FFBReport_PIDBlockLoad_Feature_Data_t));
-                Endpoint_ClearOUT();
-                }
-                else */
                 if (USB_ControlRequest.wValue == 0x0307)
                 {	// Feature 3: PID Pool Feature Report
                     USB_FFBReport_PIDPool_Feature_Data_t featureData;
@@ -137,7 +126,7 @@ void EVENT_USB_Device_ControlRequest(void)
                     _delay_us(500);	// Windows does not like to be answered too quickly
 
                     USB_FFBReport_PIDBlockLoad_Feature_Data_t pidBlockLoadData;
-                    // FfbOnCreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t*) data, &pidBlockLoadData);
+                    FFB_CreateNewEffect((USB_FFBReport_CreateNewEffect_Feature_Data_t*) data, &pidBlockLoadData);
 
                     Endpoint_ClearSETUP();
 
@@ -146,7 +135,7 @@ void EVENT_USB_Device_ControlRequest(void)
                     Endpoint_ClearOUT();
                 }
                 else if (USB_ControlRequest.wValue == 0x0309)
-                {	// Feature 1
+                {	// Soft reset
                     uint8_t report[2] = {0x09, 0x01};
 
                     Endpoint_ClearSETUP();
@@ -161,21 +150,6 @@ void EVENT_USB_Device_ControlRequest(void)
 					wdt_disable();
                     wdt_enable(WDTO_250MS); // Rationale: Interrupts are off, and an infinite loop follows.
                     while (1);
-                }
-                else if (USB_ControlRequest.wValue == 0x030F)
-                {
-                    int8_t xCenterIn, yCenterIn;
-                    memcpy(&xCenterIn, &data[0], 1);
-                    memcpy(&yCenterIn, &data[1], 1);
-
-                    int16_t pIn = data[2];
-                    int16_t iIn = data[3];
-                    int16_t dIn = data[4];
-                    uint16_t centerLookahead = data[5];
-
-                    FFB_SetPID(pIn, iIn, dIn, centerLookahead);
-                    FFB_SetCenter(xCenterIn, yCenterIn);
-
                 }
                 else if (USB_ControlRequest.wValue == 0x0306)
                 {
@@ -239,7 +213,8 @@ void HID_Task(void)
             //			LogData("Read OUT data:", out_ffbdata[0], &out_ffbdata[1], out_wait_report_bytes);
             total_bytes_read += out_wait_report_bytes;
 
-            // FfbOnUsbData(out_ffbdata, out_wait_report_bytes + 1);
+            FFB_HandleUSBMessage(out_ffbdata, out_wait_report_bytes + 1);
+
             _delay_ms(1);
         }
 

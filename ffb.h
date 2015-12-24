@@ -6,7 +6,7 @@
 void FFB_Init(void);
 void FFB_Disable(void);
 void FFB_Enable(void);
-void FFB_SetPID(int16_t p, int16_t i, int16_t d, uint16_t lookahead);
+void FFB_SetPID(int16_t p, int16_t i, int16_t d);
 void FFB_SetCenter(int8_t xCenter, int8_t yCenter);
 void FFB_Update(int8_t xAxis, int8_t yAxis);
 
@@ -195,7 +195,6 @@ void FfbEnableEffectId(uint8_t inId, uint8_t inEnable);
 #define MEffectState_Free			0x00
 #define MEffectState_Allocated		0x01
 #define MEffectState_Playing		0x02
-#define MEffectState_SentToJoystick	0x04
 
 #define USB_DURATION_INFINITE	0x7FFF
 #define MIDI_DURATION_INFINITE	0
