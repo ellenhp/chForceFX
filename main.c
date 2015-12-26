@@ -32,7 +32,7 @@ void SetupHardware(void)
 
     USB_Init();
     Joystick_Init();
-	FFB_Init();
+    FFB_Init();
 }
 
 /** Event handler for the USB_ConfigurationChanged event. This is fired when the host set the current configuration
@@ -190,30 +190,24 @@ void HID_Task(void)
 
     if (Endpoint_IsOUTReceived())
     {
-        uint8_t out_ffbdata[64];	// enough for any single OUT-report
-        uint8_t total_bytes_read = 0;
+        uint8_t usbData[64];	// enough for any single OUT-report
 
-        while (Endpoint_BytesInEndpoint() && total_bytes_read < 64)
+        while (Endpoint_BytesInEndpoint())
         {
             uint16_t out_wait_report_bytes = 0;
 
             // Read the reportID from the package to determine amount of data to expect next
-            while (Endpoint_Read_Stream_LE(&out_ffbdata, 1, NULL)
+            while (Endpoint_Read_Stream_LE(&usbData[0], 1, NULL)
             == ENDPOINT_RWSTREAM_IncompleteTransfer)
             {	// busy loop until the first byte is read out
             }
 
-            total_bytes_read += 1;
-
-            while (Endpoint_Read_Stream_LE(&out_ffbdata[1], out_wait_report_bytes, NULL)
+            while (Endpoint_Read_Stream_LE(&usbData[1], FFB_ReportSize[usbData[0] - 1] - 1, NULL)
             == ENDPOINT_RWSTREAM_IncompleteTransfer)
             {	// busy loop until the rest of the report data is read out
             }
 
-            //			LogData("Read OUT data:", out_ffbdata[0], &out_ffbdata[1], out_wait_report_bytes);
-            total_bytes_read += out_wait_report_bytes;
-
-            FFB_HandleUSBMessage(out_ffbdata, out_wait_report_bytes + 1);
+            FFB_HandleUSBMessage(usbData);
 
             _delay_ms(1);
         }

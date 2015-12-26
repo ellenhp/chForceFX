@@ -1,8 +1,11 @@
 #include "ffb.h"
+#include "effects.h"
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <util/delay.h>
 #include <avr/interrupt.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define wdt_set_interrupt_only(value)   \
     __asm__ __volatile__ (  \
@@ -24,23 +27,32 @@
 #define max(A, B) ((A > B) ? A : B)
 #define clamp(val, lower, upper) min(upper, max(lower, val))
 
-static int16_t centerP = 0;
-static int16_t centerI = 0;
-static int16_t centerD = 0;
-
-static int8_t xCenter = 0;
-static int8_t yCenter = 0;
-
-static int16_t xIntegral = 0;
-static int16_t yIntegral = 0;
-
 static volatile TEffectState gEffectStates[MAX_EFFECTS+1];	// one for each effect (array index 0 is unused to simplify things)
 
 void FFB_SetForceX(int8_t signedSpeed);
 void FFB_SetForceY(int8_t signedSpeed);
 
+const uint16_t FFB_ReportSize[] = {
+	sizeof(USB_FFBReport_SetEffect_Output_Data_t),		// 1
+	sizeof(USB_FFBReport_SetEnvelope_Output_Data_t),	// 2
+	sizeof(USB_FFBReport_SetCondition_Output_Data_t),	// 3
+	sizeof(USB_FFBReport_SetPeriodic_Output_Data_t),	// 4
+	sizeof(USB_FFBReport_SetConstantForce_Output_Data_t),	// 5
+	sizeof(USB_FFBReport_SetRampForce_Output_Data_t),	// 6
+	sizeof(USB_FFBReport_SetCustomForceData_Output_Data_t),	// 7
+	sizeof(USB_FFBReport_SetDownloadForceSample_Output_Data_t),	// 8
+	0,	// 9
+	sizeof(USB_FFBReport_EffectOperation_Output_Data_t),	// 10
+	sizeof(USB_FFBReport_BlockFree_Output_Data_t),	// 11
+	sizeof(USB_FFBReport_DeviceControl_Output_Data_t),	// 12
+	sizeof(USB_FFBReport_DeviceGain_Output_Data_t),	// 13
+	sizeof(USB_FFBReport_SetCustomForce_Output_Data_t),	// 14
+};
+
 void FFB_Init(void)
 {
+    memset(gEffectStates, 0, sizeof(gEffectStates));
+
     DDRB |= (1 << PB5) | (1 << PB6) | (1 << PB4); // ADC X and Y, one direction enable for X
     DDRE |= (1 << PE6); // Other direction enable for X
 
@@ -114,99 +126,17 @@ void FFB_SetForceX(int8_t signedSpeed)
     OCR1B = pwmState;
 }
 
-void FFB_SetPID(int16_t p, int16_t i, int16_t d)
-{
-    if (centerI != i)
-    {
-        xIntegral = 0;
-        yIntegral = 0;
-    }
-    centerP = p;
-    centerI = i;
-    centerD = d;
-}
-
-void FFB_SetCenter(int8_t xCenterIn, int8_t yCenterIn)
-{
-    xCenter = xCenterIn;
-    yCenter = yCenterIn;
-}
-
 void FFB_Update(int8_t xAxis, int8_t yAxis)
 {
-    const int16_t deadzone = 10;
-    const int16_t stiction = 60;
+    EffectResponse_t allEffects = ProcessAllEffects(gEffectStates + 1, MAX_EFFECTS - 1, xAxis, yAxis);
 
-    static int8_t lastX = 0;
-    static int8_t lastY = 0;
-    static int8_t firstRun = 1;
-
-    static int16_t xLastVel = 0;
-    static int16_t yLastVel = 0;
-
-    if (firstRun)
-    {
-        lastX = xAxis;
-        lastY = yAxis;
-        firstRun = 0;
-    }
-
-    wdt_reset();
-
-    int16_t xVel = (xAxis - lastX) / 2 + xLastVel / 2;
-    int16_t yVel = (yAxis - lastY) / 2 + yLastVel / 2;
-
-    int16_t xError = xCenter - xAxis;
-    int16_t yError = yCenter - yAxis;
-
-    xIntegral += xError;
-    yIntegral += yError;
-
-    //Aggressive value = 16
-    int16_t xForceP = clamp(xError * centerP / 64, -90, 90);
-    int16_t yForceP = clamp(yError * centerP / 64, -90, 90);
-
-    int16_t xForceI = clamp(xIntegral * centerI / 256, -127, 127);
-    int16_t yForceI = clamp(yIntegral * centerI / 256, -127, 127);
-
-    //Aggressive value = 5ish
-    int16_t xForceD = clamp(xVel * centerD / 8, -127, 127);
-    int16_t yForceD = clamp(yVel * centerD / 8, -127, 127);
-
-    int16_t xTotalForce = xForceP + xForceI - xForceD;
-    int16_t yTotalForce = yForceP + yForceI - yForceD;
-
-    if (xTotalForce > deadzone)
-    {
-        xTotalForce += stiction;
-    }
-    if (xTotalForce < -deadzone)
-    {
-        xTotalForce -= stiction;
-    }
-
-    if (yTotalForce > deadzone)
-    {
-        yTotalForce += stiction;
-    }
-    if (yTotalForce < -deadzone)
-    {
-        yTotalForce -= stiction;
-    }
-
-    FFB_SetForceX((int8_t)clamp(xTotalForce, -127, 127));
-    FFB_SetForceY((int8_t)clamp(yTotalForce, -127, 127));
-
-    xLastVel = xVel;
-    yLastVel = yVel;
-
-    lastX = xAxis;
-    lastY = yAxis;
+    FFB_SetForceX(allEffects.effectResponseX);
+    FFB_SetForceY(allEffects.effectResponseY);
 }
 
 void FFB_StopAllEffects()
 {
-    for (int i = 2; i < MAX_EFFECTS; i++)
+    for (int i = 1; i <= MAX_EFFECTS; i++)
     {
         if (gEffectStates[i].state == MEffectState_Playing)
         {
@@ -217,7 +147,7 @@ void FFB_StopAllEffects()
 
 uint8_t FFB_GetNextFreeEffect()
 {
-    for (uint8_t i = 2; i < MAX_EFFECTS; i++)
+    for (uint8_t i = 1; i <= MAX_EFFECTS; i++)
     {
         if (gEffectStates[i].state == MEffectState_Free)
         {
@@ -252,10 +182,8 @@ void FFB_CreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, U
 }
 
 void FFB_EffectOperation(USB_FFBReport_EffectOperation_Output_Data_t *data)
-	{
-	uint8_t eid = data->effectBlockIndex;
-
-	if (eid == 0xFF)
+{
+	if (data->effectBlockIndex == 0xFF)
     {
         // TODO might not be to spec, but I don't think it's a good idea to start EVERYTHING at once
         // Stopping makes sense though.
@@ -263,32 +191,34 @@ void FFB_EffectOperation(USB_FFBReport_EffectOperation_Output_Data_t *data)
         {   // Stop all
             FFB_StopAllEffects();
         }
+        return;
     }
+
+    volatile TEffectState* effect = &gEffectStates[data->effectBlockIndex];
 
 	if (data->operation == 1)
 	{	// Start
-		gEffectStates[eid].state = MEffectState_Playing;
+		effect->state = MEffectState_Playing;
     }
 	else if (data->operation == 2)
 	{	// StartSolo
 		FFB_StopAllEffects();
-		gEffectStates[eid].state = MEffectState_Playing;
+		effect->state = MEffectState_Playing;
 	}
 	else if (data->operation == 3)
 	{	// Stop
-        gEffectStates[eid].state = MEffectState_Allocated;
+        effect->state = MEffectState_Allocated;
 	}
 }
-
 
 void FFB_SetEffect(USB_FFBReport_SetEffect_Output_Data_t *data)
 {
     volatile TEffectState* effect = &gEffectStates[data->effectBlockIndex];
 
-    effect->state = MEffectState_Playing;
+    effect->type = data->effectType;
 }
 
-void FFB_HandleUSBMessage(uint8_t *data, uint16_t len)
+void FFB_HandleUSBMessage(uint8_t *data)
 {
 	uint8_t effectId = data[1]; // effectBlockIndex is always the second byte.
 

@@ -3,13 +3,6 @@
 
 #include <avr/io.h>
 
-void FFB_Init(void);
-void FFB_Disable(void);
-void FFB_Enable(void);
-void FFB_SetPID(int16_t p, int16_t i, int16_t d);
-void FFB_SetCenter(int8_t xCenter, int8_t yCenter);
-void FFB_Update(int8_t xAxis, int8_t yAxis);
-
 /* Type Defines: */
 /** Type define for the joystick HID report structure, for creating and sending HID reports to the host PC.
  *  This mirrors the layout described to the host in the HID report descriptor, in Descriptors.c.
@@ -165,13 +158,6 @@ typedef struct
 	uint8_t		memoryManagement;	// Bits: 0=DeviceManagedPool, 1=SharedParameterBlocks
 } USB_FFBReport_PIDPool_Feature_Data_t;
 
-// Handle incoming data from USB
-void FfbOnUsbData(uint8_t *data, uint16_t len);
-
-// Handle incoming feature requests
-void FfbOnCreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData);
-void FfbOnPIDPool(USB_FFBReport_PIDPool_Feature_Data_t *data);
-
 // Utility to wait any amount of milliseconds.
 // Resets watchdog for each 1ms wait.
 void WaitMs(int ms);
@@ -180,16 +166,6 @@ void WaitMs(int ms);
 // function for making 10us delays that don't have be known at compile time.
 // max delay 2560us.
 void _delay_us10(uint8_t delay);
-
-// Effect manipulations
-
-uint8_t CalcGain(uint8_t usbValue, uint8_t gain);
-
-void FfbEnableSprings(uint8_t inEnable);
-void FfbEnableConstants(uint8_t inEnable);
-void FfbEnableTriangles(uint8_t inEnable);
-void FfbEnableSines(uint8_t inEnable);
-void FfbEnableEffectId(uint8_t inId, uint8_t inEnable);
 
 // Bit-masks for effect states
 #define MEffectState_Free			0x00
@@ -212,9 +188,12 @@ void FfbEnableEffectId(uint8_t inId, uint8_t inEnable);
 #define USB_EFFECT_FRICTION		0x0B
 #define USB_EFFECT_CUSTOM		0x0C
 
+extern const uint16_t FFB_ReportSize[];
+
 typedef struct
 {
 	uint8_t state;	// see constants <MEffectState_*>
+	uint8_t type;	// see USB_EFFECT_* #defines above
 	uint16_t usb_duration, usb_fadeTime;	// used to calculate fadeTime to MIDI, since in USB it is given as time difference from the end while in MIDI it is given as time from start
 	// These are used to calculate effects of USB gain to MIDI data
 	uint8_t usb_gain, usb_offset, usb_attackLevel, usb_fadeLevel;
@@ -241,5 +220,14 @@ typedef struct
 	void (*SetRampForce)(USB_FFBReport_SetRampForce_Output_Data_t* data, volatile TEffectState* effect);
 	int  (*SetEffect)(USB_FFBReport_SetEffect_Output_Data_t* data, volatile TEffectState* effect);
 } FFB_Driver;
+
+void FFB_Init(void);
+void FFB_Disable(void);
+void FFB_Enable(void);
+void FFB_SetPID(int16_t p, int16_t i, int16_t d);
+void FFB_SetCenter(int8_t xCenter, int8_t yCenter);
+void FFB_Update(int8_t xAxis, int8_t yAxis);
+void FFB_CreateNewEffect(USB_FFBReport_CreateNewEffect_Feature_Data_t* inData, USB_FFBReport_PIDBlockLoad_Feature_Data_t *outData);
+void FFB_HandleUSBMessage(uint8_t *data);
 
 #endif // _FFB_
